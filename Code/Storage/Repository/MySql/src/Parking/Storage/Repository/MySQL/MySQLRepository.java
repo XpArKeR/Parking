@@ -235,6 +235,9 @@ public class MySQLRepository extends StorageRepository
         if (entityObject == null) {
             throw new IllegalArgumentException("Argument is null!");
         }
+        else if ((entityObject.Reference != null) && (entityObject.Reference.isEmpty())) {
+            throw new IllegalArgumentException("Referenc emay not be empty!");
+        }
         
         Class type = entityObject.getClass();
         

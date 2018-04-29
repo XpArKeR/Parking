@@ -119,12 +119,7 @@ public class Utils {
     {
         String fieldName = field.getName();
         
-        if ((fieldName != "ID") && (fieldName != "Reference") && (!fields.contains(fieldName)))
-        {
-            return true;
-        }
-        
-        return false;
+        return (!"ID".equals(fieldName)) && (!"Reference".equals(fieldName)) && (!fields.contains(fieldName));
     }
     
     public static void AddProperty(StringBuilder commandBuilder, Field field)
@@ -163,5 +158,5 @@ public class Utils {
         String tableName = typeName.replace(".", "_");
         
         return tableName;
-    }
+    }    
 }
