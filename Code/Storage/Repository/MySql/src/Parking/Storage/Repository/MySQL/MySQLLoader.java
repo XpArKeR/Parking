@@ -7,6 +7,8 @@ package Parking.Storage.Repository.MySQL;
 
 import Parking.Core.BaseObject;
 import Parking.Core.EntityObject;
+import static Parking.Storage.Repository.MySQL.Utils.isClassCollection;
+import java.lang.reflect.Field;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -45,7 +47,9 @@ public class MySQLLoader
     {
         Boolean isSuccessful = false;
         
-        String tableName = Utils.GetTableName(entityObject.getClass().getName());
+        Class entityClass = entityObject.getClass();
+        
+        String tableName = Utils.GetTableName(entityClass.getName());
         
         Boolean useUpdate = false;
         
@@ -58,40 +62,78 @@ public class MySQLLoader
             
             if (resultSet.first())
             {
-                useUpdate = true;
+                if (resultSet.getInt(1) > 0)
+                {
+                    useUpdate = true;
+                }                
             }
         }
         catch (SQLException exception)
         {            
+            System.out.println(exception);
         }
             
         StringBuilder commandBuilder = new StringBuilder();
         
-        if (!useUpdate) {
+        if (!useUpdate) {                        
+            commandBuilder.append(String.format("INSERT INTO %s (", tableName));
+            StringBuilder valuesBuilder = new StringBuilder();            
             
+            for (Field field : entityClass.getFields()){                
+                if (!isClassCollection(field.getType())) {
+                    commandBuilder.append(String.format("%s, ", field.getName()));                        
+                    valuesBuilder.append(String.format("%s, ", Utils.GetValue(entityObject, field)));
+                }
+            }
+            
+            commandBuilder.deleteCharAt(commandBuilder.length() - 2);
+            valuesBuilder.deleteCharAt(valuesBuilder.length() - 2);
+            
+            commandBuilder.append(String.format(") VALUES (%s)", valuesBuilder.toString()));
         }
         else {
+            commandBuilder.append(String.format("UPDATE %s SET ", tableName));
+                        
+            for (Field field : entityClass.getFields())
+            {
+                if (Utils.IsEligable(field))
+                {
+                    if (!isClassCollection(field.getType())) 
+                    {
+                        commandBuilder.append(String.format("%s=%s, ",field.getName(), Utils.GetValue(entityObject, field)));
+                    }
+                }
+            }
             
+            commandBuilder.deleteCharAt(commandBuilder.length() - 2);
+            
+            commandBuilder.append(String.format(" WHERE Reference='%s'", entityObject.Reference));
         }
         
         String command = commandBuilder.toString();
         
         if (!command.isEmpty()) {
-            try{
-            Statement statement = connection.createStatement();
-            
-            Boolean isResultSet = statement.execute(command);
-            
-            if (isResultSet) {
-                ResultSet resultSet = statement.getResultSet();
-            }
-            else {
+            try
+            {
+                Statement statement = connection.createStatement();
+
+                Boolean isResultSet = statement.execute(command);
+
+                if (isResultSet) 
+                {
+                    ResultSet resultSet = statement.getResultSet();
+                }
+                else 
+                {
+
+                }
                 
+                isSuccessful = true;
             }
-        }
-        catch (SQLException exception)
-        {            
-        }
+            catch (SQLException exception)
+            {    
+                System.out.println(exception);
+            }
         }
         
         return isSuccessful;

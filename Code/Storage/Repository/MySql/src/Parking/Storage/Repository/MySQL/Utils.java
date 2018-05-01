@@ -115,11 +115,26 @@ public class Utils {
         return fieldCommand;
     }
     
+    public static Boolean IsEligable(Field field)
+    {
+        if (field != null)
+        {   
+            String fieldName = field.getName();
+        
+            return (!"ID".equals(fieldName)) && (!"Reference".equals(fieldName));
+        }
+        
+        return false;
+    }
+    
     private static Boolean IsEligable(List<String> fields, Field field)
     {
-        String fieldName = field.getName();
+        if (IsEligable(field))
+        {        
+            return  !fields.contains(field.getName());
+        }
         
-        return (!"ID".equals(fieldName)) && (!"Reference".equals(fieldName)) && (!fields.contains(fieldName));
+        return false;
     }
     
     public static void AddProperty(StringBuilder commandBuilder, Field field)
@@ -158,5 +173,47 @@ public class Utils {
         String tableName = typeName.replace(".", "_");
         
         return tableName;
-    }    
+    }
+    
+    public static Object GetValue(EntityObject entityObject, Field field)
+    {
+        Object value = null;
+                
+        try
+        {        
+            value = field.get(entityObject);
+
+            Class fieldValueClass = field.getType();
+
+            if (String.class.isAssignableFrom(fieldValueClass)) 
+            {
+                value = String.format("\"%s\"", value);
+            } 
+            else if (EntityObject.class.isAssignableFrom(fieldValueClass)) 
+            {
+                if (value == null)
+                {
+                    value = "\"\"";
+                }
+                else
+                {
+                    value = String.format("\"%s\"", ((EntityObject)value).Reference);
+                }
+            }
+            else if ((Integer.class.isAssignableFrom(fieldValueClass)) || (int.class.isAssignableFrom(fieldValueClass))) 
+            {
+                // skip this...
+            } 
+            else 
+            {
+                System.out.println(String.format("Unsupported Field type: %s", fieldValueClass.getName()));
+            }
+        } 
+        catch (Exception exception) 
+        {
+            System.out.println(exception);
+        }
+        
+        return value;
+    }
 }
