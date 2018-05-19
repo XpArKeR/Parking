@@ -28,5 +28,20 @@ public class EntityObject extends BaseObject
         }
         
         return false;
-    }   
+    }
+    
+    @Override
+    public void SetProperty(String propertyName, Object value)
+    {
+        switch (propertyName)
+        {
+            
+            case "Refernce":
+            case "Parking.Core.EntityObject.Refernce":
+                this.Reference = (String)value;
+                
+            default:
+                super.SetProperty(propertyName, value);
+        }
+    }
 }

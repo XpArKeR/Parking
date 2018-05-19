@@ -26,4 +26,15 @@ public class BaseObject extends Object
     {
         return this.instanceID;
     }
+    
+    public void SetProperty(String propertyName, Object value)
+    {
+        switch (propertyName)
+        {
+            
+            case "ID":
+            case "Parking.Core.BaseObject.ID":
+                this.ID = (String)value;
+        }
+    }
 }
