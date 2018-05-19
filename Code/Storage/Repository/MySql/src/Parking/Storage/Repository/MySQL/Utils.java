@@ -14,6 +14,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -22,6 +23,8 @@ import java.util.Map;
  * @author noldi
  */
 public class Utils {
+    private static HashMap<Integer, java.sql.Types> sqlTypesCache = new HashMap<Integer, java.sql.Types>();
+    
     public static Boolean CreateTable(MySQLRepository repository, Class type, Class baseType)
     {
         Boolean isSuccessful = false;
@@ -215,5 +218,21 @@ public class Utils {
         }
         
         return value;
+    }
+    
+    public static java.sql.Types GetSqlType(int typeID)
+    {
+        java.sql.Types type = null;
+        
+        if (sqlTypesCache.containsKey(typeID))
+        {
+            type = sqlTypesCache.get(typeID);
+        }
+        else
+        {
+            
+        }
+        
+        return type;
     }
 }

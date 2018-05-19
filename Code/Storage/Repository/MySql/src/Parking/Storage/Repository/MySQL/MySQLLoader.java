@@ -11,6 +11,7 @@ import static Parking.Storage.Repository.MySQL.Utils.isClassCollection;
 import java.lang.reflect.Field;
 import java.sql.Connection;
 import java.sql.ResultSet;
+import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
@@ -30,7 +31,68 @@ public class MySQLLoader
     
     public <T extends BaseObject> T Get(String reference, Class type)
     {
-        return null;
+        T returnValue = null;
+        
+        if (type == null)
+        {
+            throw new IllegalArgumentException("A Class must be provided!");
+        }
+        
+        if ((reference == null) ||(reference.isEmpty()))
+        {
+            return returnValue;
+        }
+        
+        String tableName = Utils.GetTableName(type.getName());
+        
+        Connection connection = this.repository.GetConnection();
+        
+        try{
+            Statement statement = connection.createStatement();
+            
+            String query = String.format("SELECT * FROM %s WHERE Reference='%s'", tableName, reference);
+            
+            ResultSet resultSet = statement.executeQuery(query);
+            
+            if (resultSet.first())
+            {
+                try
+                {
+                    returnValue = (T)type.newInstance();
+                }
+                catch (Exception exception)
+                {
+                    
+                }
+                
+                if (returnValue != null)
+                {
+                    ResultSetMetaData resultSetMetaData = resultSet.getMetaData();
+
+                    for (int counter = 1; counter < resultSetMetaData.getColumnCount(); counter++)
+                    {
+                        String typeName = resultSetMetaData.getColumnTypeName(counter);
+
+                        switch (typeName)
+                        {
+                            case "VARCHAR":                                
+                                returnValue.SetProperty(resultSetMetaData.getColumnName(counter), resultSet.getString(counter));
+                                break;
+                                
+                            default:
+                                System.out.println(String.format("unsupport sql type... %s", typeName));
+                        }
+                    }
+                }
+            }
+        }
+        catch (SQLException exception)
+        {            
+            System.out.println(exception);
+        }
+        
+        
+        return returnValue;
     }
     
     public <T extends BaseObject> T GetByID(String id, Class type) 
