@@ -1,5 +1,6 @@
 package Parking.Core;
 
+import java.util.Date;
 import java.util.UUID;
 
 /*
@@ -21,6 +22,7 @@ public class BaseObject extends Object
     
     private String instanceID;
     public String ID;
+    public Date ModifiedOn;
     
     public String GetInstanceID()
     {
