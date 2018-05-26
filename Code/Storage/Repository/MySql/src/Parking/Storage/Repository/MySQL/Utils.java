@@ -9,6 +9,7 @@ import Parking.Core.EntityObject;
 import java.lang.reflect.Field;
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
+import java.util.Date;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -31,7 +32,7 @@ public class Utils {
         
         StringBuilder commandBuilder = new StringBuilder();
                         
-        Parking.Base.Utils.AppendLine(commandBuilder, String.format("CREATE TABLE %s", GetTableName(baseType.getName())));
+        Parking.Base.Utils.AppendLine(commandBuilder, String.format("CREATE TABLE %s", GetTableName(baseType)));
         
         Parking.Base.Utils.AppendLine(commandBuilder, "(ID varchar(36) NOT NULL PRIMARY KEY");
         Parking.Base.Utils.AppendLine(commandBuilder, ", Reference varchar(255) NOT NULL");
@@ -69,7 +70,7 @@ public class Utils {
     {
         Boolean isSuccessful = false;
         
-        String tableName = Utils.GetTableName(baseClass.getName());
+        String tableName = Utils.GetTableName(baseClass);
         
         List<String> tableFields = new ArrayList<>();
         
@@ -153,14 +154,24 @@ public class Utils {
     {
         String propertyType = "";
                         
-        if (String.class.isAssignableFrom(field.getType())) {
+        if (String.class.isAssignableFrom(field.getType())) 
+        {
             propertyType = "varchar(255)";
-        } else if ((Integer.class.isAssignableFrom(field.getType())) || (int.class.isAssignableFrom(field.getType()))) {
+        } 
+        else if ((Integer.class.isAssignableFrom(field.getType())) || (int.class.isAssignableFrom(field.getType()))) 
+        {
             propertyType = "int";
         } 
-        else if (EntityObject.class.isAssignableFrom(field.getType())) {        
+        else if (EntityObject.class.isAssignableFrom(field.getType())) 
+        {        
             propertyType = "varchar(255)";
-        } else {
+        }
+        else if (Date.class.isAssignableFrom(field.getType())) 
+        {        
+            propertyType = "DateTime";
+        } 
+        else 
+        {
             System.out.println(String.format("Unsupported Field type: %s", field.getType().getName()));
         }
         
@@ -171,9 +182,16 @@ public class Utils {
         return Collection.class.isAssignableFrom(c) || Map.class.isAssignableFrom(c);
     }
     
-    public static String GetTableName(String typeName)
+    public static String GetTableName(Class type)
     {
-        String tableName = typeName.replace(".", "_");
+        Class tableType = type;
+        
+        while (tableType.getSuperclass() != EntityObject.class)
+        {
+            tableType = tableType.getSuperclass();
+        }
+        
+        String tableName = tableType.getName().replace(".", "_");
         
         return tableName;
     }
@@ -200,13 +218,19 @@ public class Utils {
                 }
                 else
                 {
-                    value = String.format("\"%s\"", ((EntityObject)value).Reference);
+                    value = String.format("\"%s\"", ((EntityObject)value).ID);
                 }
             }
             else if ((Integer.class.isAssignableFrom(fieldValueClass)) || (int.class.isAssignableFrom(fieldValueClass))) 
             {
                 // skip this...
-            } 
+            }
+            else if (java.util.Date.class.isAssignableFrom(fieldValueClass))
+            {
+                java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+
+                value = sdf.format(value);
+            }
             else 
             {
                 System.out.println(String.format("Unsupported Field type: %s", fieldValueClass.getName()));
@@ -234,5 +258,27 @@ public class Utils {
         }
         
         return type;
+    }
+    
+    public static Map<String, Object> GetFieldValues(EntityObject entityObject, Class entityType)
+    {
+        Map<String, Object> fieldValues = new HashMap<String, Object>();
+        
+        for (Field field : entityType.getFields())
+        {
+            if (IsEligable(field))
+            {
+                try
+                {
+                    fieldValues.put(field.getName(), field.get(entityObject));
+                }
+                catch (Exception exception)
+                {
+                    
+                }
+            }
+        }
+        
+        return fieldValues;
     }
 }

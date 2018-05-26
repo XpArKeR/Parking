@@ -7,6 +7,7 @@ package Parking.Storage.Repository.MySQL;
 
 import Parking.Core.BaseObject;
 import Parking.Core.EntityObject;
+import Parking.Storage.Repository.MySQL.Transactions.Transaction;
 import static Parking.Storage.Repository.MySQL.Utils.isClassCollection;
 import java.lang.reflect.Field;
 import java.sql.Connection;
@@ -15,6 +16,7 @@ import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
+import java.util.HashMap;
 
 /**
  *
@@ -43,11 +45,12 @@ public class MySQLLoader
             return returnValue;
         }
         
-        String tableName = Utils.GetTableName(type.getName());
+        String tableName = Utils.GetTableName(type);
         
         Connection connection = this.repository.GetConnection();
         
-        try{
+        try
+        {
             Statement statement = connection.createStatement();
             
             String query = String.format("SELECT * FROM %s WHERE Reference='%s'", tableName, reference);
@@ -58,32 +61,21 @@ public class MySQLLoader
             {
                 try
                 {
-                    returnValue = (T)type.newInstance();
+                    returnValue = (T)type.newInstance();                    
                 }
                 catch (Exception exception)
                 {
-                    
-                }
+                    System.out.println(String.format("Exception whilst creating instance of type %s.", type.getName()));
+                }                                
                 
                 if (returnValue != null)
                 {
-                    ResultSetMetaData resultSetMetaData = resultSet.getMetaData();
-
-                    for (int counter = 1; counter < resultSetMetaData.getColumnCount(); counter++)
-                    {
-                        String typeName = resultSetMetaData.getColumnTypeName(counter);
-
-                        switch (typeName)
-                        {
-                            case "VARCHAR":                                
-                                returnValue.SetProperty(resultSetMetaData.getColumnName(counter), resultSet.getString(counter));
-                                break;
-                                
-                            default:
-                                System.out.println(String.format("unsupport sql type... %s", typeName));
-                        }
-                    }
+                    this.Populate(returnValue, type, resultSet);
                 }
+            }
+            else
+            {
+                System.out.println(String.format("Referenced Object not found: %s (%s).", reference, type.getName()));
             }
         }
         catch (SQLException exception)
@@ -91,13 +83,144 @@ public class MySQLLoader
             System.out.println(exception);
         }
         
+        return returnValue;
+    }
+            
+    public <T extends BaseObject> T GetByID(String id, Class type) 
+    {
+        T returnValue = null;
+        
+        if (type == null)
+        {
+            throw new IllegalArgumentException("A Class must be provided!");
+        }
+        
+        if (id.isEmpty())
+        {
+            return returnValue;
+        }
+        
+        String tableName = Utils.GetTableName(type);
+        
+        Connection connection = this.repository.GetConnection();
+        
+        try
+        {
+            Statement statement = connection.createStatement();
+            
+            String query = String.format("SELECT * FROM %s WHERE ID='%s'", tableName, id);
+            
+            ResultSet resultSet = statement.executeQuery(query);
+            
+            if (resultSet.first())
+            {
+                try
+                {
+                    returnValue = (T)type.newInstance();                    
+                }
+                catch (Exception exception)
+                {
+                    System.out.println(String.format("Exception whilst creating instance of type %s.", type.getName()));
+                }                                
+                
+                if (returnValue != null)
+                {
+                    this.Populate(returnValue, type, resultSet);
+                }
+            }
+            else
+            {
+                System.out.println(String.format("Referenced Object not found: %s (%s).", id, type.getName()));
+            }
+        }
+        catch (SQLException exception)
+        {            
+            System.out.println(exception);
+        }
         
         return returnValue;
     }
     
-    public <T extends BaseObject> T GetByID(String id, Class type) 
+    protected void Populate(BaseObject baseObject,Class type, ResultSet resultSet)
     {
-        return null;
+        if (baseObject != null)
+        {
+            try
+            {
+                HashMap<String, BaseObject> loadedObjects = new HashMap<String, BaseObject>();
+
+                ResultSetMetaData resultSetMetaData = resultSet.getMetaData();
+
+                for (int counter = 1; counter < resultSetMetaData.getColumnCount(); counter++)
+                {
+                    String columnName = resultSetMetaData.getColumnName(counter);
+
+                    Field field = null;
+
+                    try
+                    {
+                        field = type.getField(columnName);                                              
+
+                        if (EntityObject.class.isAssignableFrom(field.getType()))
+                        {
+                            String referencedObjectID = resultSet.getString(counter);
+
+                            if (!referencedObjectID.isEmpty())
+                            {
+                                EntityObject referencedObject = null;
+
+                                if (loadedObjects.containsKey(referencedObjectID))
+                                {
+                                    referencedObject = (EntityObject)loadedObjects.get(referencedObjectID);
+                                }
+                                else
+                                {
+                                    referencedObject = this.GetByID(referencedObjectID, field.getType());
+                                    
+                                    if (referencedObject != null)
+                                    {
+                                        loadedObjects.put(referencedObjectID, referencedObject);
+                                    }
+                                }
+
+                                if (referencedObject != null)
+                                {
+                                    field.set(baseObject, referencedObject);                                
+                                }
+                            }
+                        }
+                        else if (Utils.isClassCollection(field.getType()))
+                        {
+                            Class collectionType = field.getType().getComponentType();
+                            
+                            
+                        }
+                        else
+                        {
+                            Object value = resultSet.getObject(counter);
+
+                            if ("ID".equals(columnName))
+                            {
+                                if (!loadedObjects.containsKey((String)value))
+                                {
+                                    loadedObjects.put((String)value, baseObject);
+                                }
+                            }
+
+                            field.set(baseObject, value);
+                        }
+                    }
+                    catch (Exception exception)
+                    {
+                        System.out.println("Exception when converting Data from database...");
+                    }
+                }
+            }
+            catch (SQLException exception)
+            {            
+                System.out.println(exception);
+            }
+        }   
     }
     
     public <T extends BaseObject> ArrayList<T> Search(Class type) 
@@ -109,94 +232,81 @@ public class MySQLLoader
     {
         Boolean isSuccessful = false;
         
-        Class entityClass = entityObject.getClass();
-        
-        String tableName = Utils.GetTableName(entityClass.getName());
-        
-        Boolean useUpdate = false;
-        
         Connection connection = this.repository.GetConnection();
-        
-        try{
-            Statement statement = connection.createStatement();
-            
-            ResultSet resultSet = statement.executeQuery(String.format("SELECT COUNT(*) FROM %s WHERE Reference='%s'", tableName, entityObject.Reference));
-            
-            if (resultSet.first())
-            {
-                if (resultSet.getInt(1) > 0)
-                {
-                    useUpdate = true;
-                }                
-            }
-        }
-        catch (SQLException exception)
-        {            
-            System.out.println(exception);
-        }
-            
-        StringBuilder commandBuilder = new StringBuilder();
-        
-        if (!useUpdate) {                        
-            commandBuilder.append(String.format("INSERT INTO %s (", tableName));
-            StringBuilder valuesBuilder = new StringBuilder();            
-            
-            for (Field field : entityClass.getFields()){                
-                if (!isClassCollection(field.getType())) {
-                    commandBuilder.append(String.format("%s, ", field.getName()));                        
-                    valuesBuilder.append(String.format("%s, ", Utils.GetValue(entityObject, field)));
-                }
-            }
-            
-            commandBuilder.deleteCharAt(commandBuilder.length() - 2);
-            valuesBuilder.deleteCharAt(valuesBuilder.length() - 2);
-            
-            commandBuilder.append(String.format(") VALUES (%s)", valuesBuilder.toString()));
-        }
-        else {
-            commandBuilder.append(String.format("UPDATE %s SET ", tableName));
                         
-            for (Field field : entityClass.getFields())
-            {
-                if (Utils.IsEligable(field))
-                {
-                    if (!isClassCollection(field.getType())) 
-                    {
-                        commandBuilder.append(String.format("%s=%s, ",field.getName(), Utils.GetValue(entityObject, field)));
-                    }
-                }
-            }
-            
-            commandBuilder.deleteCharAt(commandBuilder.length() - 2);
-            
-            commandBuilder.append(String.format(" WHERE Reference='%s'", entityObject.Reference));
-        }
+        Transaction transaction = new Transaction(connection);
+        transaction.Prepare();
+        transaction.Save(entityObject);
         
-        String command = commandBuilder.toString();
-        
-        if (!command.isEmpty()) {
-            try
-            {
-                Statement statement = connection.createStatement();
-
-                Boolean isResultSet = statement.execute(command);
-
-                if (isResultSet) 
-                {
-                    ResultSet resultSet = statement.getResultSet();
-                }
-                else 
-                {
-
-                }
+        transaction.Commit();
                 
-                isSuccessful = true;
-            }
-            catch (SQLException exception)
-            {    
-                System.out.println(exception);
-            }
-        }
+                        
+//        StringBuilder commandBuilder = new StringBuilder();
+//        
+//        if (!useUpdate) {                        
+//            commandBuilder.append(String.format("INSERT INTO %s (", tableName));
+//            StringBuilder valuesBuilder = new StringBuilder();            
+//            
+//            for (Field field : entityClass.getFields()){                
+//                if (!isClassCollection(field.getType())) {
+//                    commandBuilder.append(String.format("%s, ", field.getName()));                        
+//                    valuesBuilder.append(String.format("%s, ", Utils.GetValue(entityObject, field)));
+//                }
+//            }
+//            
+//            commandBuilder.deleteCharAt(commandBuilder.length() - 2);
+//            valuesBuilder.deleteCharAt(valuesBuilder.length() - 2);
+//            
+//            commandBuilder.append(String.format(") VALUES (%s)", valuesBuilder.toString()));
+//        }
+//        else {
+//            commandBuilder.append(String.format("UPDATE %s SET ", tableName));
+//                        
+//            for (Field field : entityClass.getFields())
+//            {
+//                if (Utils.IsEligable(field))
+//                {
+//                    if (!isClassCollection(field.getType())) 
+//                    {
+//                        commandBuilder.append(String.format("%s=%s, ",field.getName(), Utils.GetValue(entityObject, field)));
+//                    }
+//                    else
+//                    {
+//                        
+//                    }
+//                }
+//            }
+//            
+//            commandBuilder.deleteCharAt(commandBuilder.length() - 2);
+//            
+//            commandBuilder.append(String.format(" WHERE Reference='%s'", entityObject.Reference));
+//        }
+//        
+//        String command = commandBuilder.toString();
+//        
+//        if (!command.isEmpty()) {
+//            try
+//            {
+//                Statement statement = connection.createStatement();
+//
+//                Boolean isResultSet = statement.execute(command);
+//
+//                if (isResultSet) 
+//                {
+//                    ResultSet resultSet = statement.getResultSet();
+//                }
+//                else 
+//                {
+//
+//                }
+//                
+//                isSuccessful = true;
+//            }
+//            catch (SQLException exception)
+//            {    
+//                System.out.println(exception);
+//            }
+//        }
         
         return isSuccessful;
     }

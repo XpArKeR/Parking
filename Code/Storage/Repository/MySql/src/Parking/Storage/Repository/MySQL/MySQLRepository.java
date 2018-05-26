@@ -131,7 +131,7 @@ public class MySQLRepository extends StorageRepository
             baseClass = baseClass.getSuperclass();
         }
         
-        if (!this.CheckTableExists(baseClass.getName())) {
+        if (!this.CheckTableExists(baseClass)) {
             isSuccessful = Utils.CreateTable(this, type, baseClass);
         } else if (!Utils.UpdateTable(this, baseClass)){
             isSuccessful = false;
@@ -142,11 +142,11 @@ public class MySQLRepository extends StorageRepository
         return isSuccessful;
     }
             
-    private Boolean CheckTableExists(String typeName)     
+    private Boolean CheckTableExists(Class type)     
     {
         Boolean tableExists = false;
         
-        String tableName = Utils.GetTableName(typeName);
+        String tableName = Utils.GetTableName(type);
         
         String command = String.format("SELECT * FROM information_schema.tables WHERE table_schema = '%s' AND table_name = '%s' LIMIT 1;", this.database, tableName);
         
