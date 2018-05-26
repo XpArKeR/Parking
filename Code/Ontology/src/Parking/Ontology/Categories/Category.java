@@ -11,6 +11,23 @@ import Parking.Core.EntityObject;
  *
  * @author noldi
  */
-public class Category extends EntityObject {
+public class Category extends EntityObject 
+{
+    public String Name;
     
+    @Override
+    public void SetProperty(String propertyName, Object value)
+    {
+        switch (propertyName)
+        {
+            case "Name":
+            case "Parking.Ontology.Categories.Category.Name":
+                
+                this.Name = (String)value;
+                break;       
+                
+            default:
+                super.SetProperty(propertyName, value);
+        }
+    }    
 }
