@@ -137,12 +137,12 @@ public class Transaction
         
         ArrayList<Object> values = new ArrayList<Object>();
         
-        for (Entry<String, Object> fieldValue : fieldValues.entrySet())
+        for (FieldValue fieldValue : fieldValues)
         {
-            if (Utils.IsEligable(fieldValue.getKey()))
+            if (Utils.IsEligable(fieldValue.Key))
             {
-                commandBuilder.append(String.format("%s = ?, ", fieldValue.getKey()));
-                values.add(fieldValue.getValue());
+                commandBuilder.append(String.format("%s = ?, ", fieldValue.Key));
+                values.add(fieldValue.Value);
             }
         }
         
@@ -156,9 +156,9 @@ public class Transaction
             
             Integer counter = 1;
             
-            for (Object value : fieldValues.entrySet())
+            for (FieldValue fieldValue : fieldValues)
             {
-                preparedStatement.setObject(counter, value);
+                preparedStatement.setObject(counter, fieldValue.Value);
                 counter++;
             }
             
@@ -201,9 +201,9 @@ public class Transaction
             
             Integer counter = 1;
             
-            for (Entry<String, Object> fieldValue : fieldValues.entrySet())
+            for (FieldValue fieldValue : fieldValues)
             {
-                preparedStatement.setObject(counter, fieldValue.getValue());
+                preparedStatement.setObject(counter, fieldValue.Value);
                 counter++;
             }
             
