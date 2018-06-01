@@ -6,6 +6,7 @@
 package Parking.Storage.Repository.MySQL;
 
 import Parking.Core.EntityObject;
+import Parking.Storage.Repository.MySQL.Transactions.FieldValue;
 import java.lang.reflect.Field;
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
@@ -119,13 +120,18 @@ public class Utils {
         return fieldCommand;
     }
     
+    public static Boolean IsEligable(String fieldName)
+    {
+        return (!"ID".equals(fieldName)) && (!"Reference".equals(fieldName));   
+    }
+    
     public static Boolean IsEligable(Field field)
     {
         if (field != null)
         {   
             String fieldName = field.getName();
         
-            return (!"ID".equals(fieldName)) && (!"Reference".equals(fieldName));
+            return IsEligable(fieldName);
         }
         
         return false;
@@ -260,9 +266,9 @@ public class Utils {
         return type;
     }
     
-    public static Map<String, Object> GetFieldValues(EntityObject entityObject, Class entityType)
+    public static List<FieldValue> GetFieldValues(EntityObject entityObject, Class entityType)
     {
-        Map<String, Object> fieldValues = new HashMap<String, Object>();
+        List<FieldValue> fieldValues = new ArrayList<FieldValue>();
         
         for (Field field : entityType.getFields())
         {
@@ -270,7 +276,10 @@ public class Utils {
             {
                 try
                 {
-                    fieldValues.put(field.getName(), field.get(entityObject));
+                    FieldValue fieldValue = new FieldValue(field.getName(), field.get(entityObject), isClassCollection(entityType));
+                            
+                    fieldValues.add(fieldValue);
+                            
                 }
                 catch (Exception exception)
                 {

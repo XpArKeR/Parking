@@ -131,11 +131,16 @@ public class MySQLRepository extends StorageRepository
             baseClass = baseClass.getSuperclass();
         }
         
-        if (!this.CheckTableExists(baseClass)) {
+        if (!this.CheckTableExists(baseClass)) 
+        {
             isSuccessful = Utils.CreateTable(this, type, baseClass);
-        } else if (!Utils.UpdateTable(this, baseClass)){
+        } 
+        else if (!Utils.UpdateTable(this, baseClass))
+        {
             isSuccessful = false;
-        } else {
+        } 
+        else 
+        {
             isSuccessful = true;
         }
         
