@@ -11,6 +11,23 @@ import Parking.Core.EntityObject;
  *
  * @author noldi
  */
-public class Barcode extends EntityObject {
+public class Barcode extends EntityObject 
+{
     public String Code;
+    
+     @Override
+    public void SetProperty(String propertyName, Object value)
+    {
+        switch (propertyName)
+        {
+            case "Code":
+            case "Parking.Ontology.Optics.Code":
+                
+                this.Code = (String)value;
+                break;                              
+                
+            default:
+                super.SetProperty(propertyName, value);
+        }
+    }
 }
