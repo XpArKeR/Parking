@@ -21,4 +21,5 @@ public abstract class StorageRepository extends BaseObject
     public abstract <T extends EntityObject> T GetByID(String id, Class type);
     public abstract <T extends EntityObject> ArrayList<T> Search(Class type);
     public abstract Boolean Save(EntityObject baseObject);
+    public abstract Boolean Save(EntityObject baseObject, TransactionParameters transactionParameters);
 }

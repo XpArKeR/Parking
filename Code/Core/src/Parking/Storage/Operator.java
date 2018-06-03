@@ -1,8 +1,3 @@
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
- */
 package Parking.Storage;
 
 import Parking.Core.EntityObject;
@@ -20,9 +15,12 @@ public class Operator extends Parking.Core.Operator
         Boolean isSuccessful = super.Load();
         Parking.Storage.Manager manager = Parking.Base.Storage.GetManager();
         
-        if (manager != null){
-            for (Parking.Storage.StorageRepository repository : manager.GetRepositories()) {
-                if (!repository.Open()){
+        if (manager != null)
+        {
+            for (Parking.Storage.StorageRepository repository : manager.GetRepositories()) 
+            {
+                if (!repository.Open())
+                {
                     isSuccessful = false;
                     break;
                 }
@@ -61,8 +59,10 @@ public class Operator extends Parking.Core.Operator
         
         Parking.Storage.Manager manager = Parking.Base.Storage.GetManager();
         
-        if (manager != null){
-            for (Parking.Storage.StorageRepository repository : manager.GetRepositories(type)) {
+        if (manager != null)
+        {
+            for (Parking.Storage.StorageRepository repository : manager.GetRepositories(type)) 
+            {
                 returnValue = repository.Get(reference, type);
                 
                 if (returnValue != null)
@@ -81,8 +81,10 @@ public class Operator extends Parking.Core.Operator
         
         Parking.Storage.Manager manager = Parking.Base.Storage.GetManager();
         
-        if (manager != null){
-            for (Parking.Storage.StorageRepository repository : manager.GetRepositories(type)) {
+        if (manager != null)
+        {
+            for (Parking.Storage.StorageRepository repository : manager.GetRepositories(type)) 
+            {
                 returnValue.addAll(repository.Search(type));
             }
         }
