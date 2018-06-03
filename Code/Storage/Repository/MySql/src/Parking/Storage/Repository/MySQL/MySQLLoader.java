@@ -8,7 +8,7 @@ package Parking.Storage.Repository.MySQL;
 import Parking.Core.BaseObject;
 import Parking.Core.EntityObject;
 import Parking.Storage.Repository.MySQL.Transactions.Transaction;
-import static Parking.Storage.Repository.MySQL.Utils.isClassCollection;
+import Parking.Storage.TransactionParameters;
 import java.lang.reflect.Field;
 import java.sql.Connection;
 import java.sql.ResultSet;
@@ -75,7 +75,7 @@ public class MySQLLoader
             }
             else
             {
-                System.out.println(String.format("Referenced Object not found: %s (%s).", reference, type.getName()));
+                //System.out.println(String.format("Referenced Object not found: %s (%s).", reference, type.getName()));
             }
         }
         catch (SQLException exception)
@@ -189,7 +189,7 @@ public class MySQLLoader
                                 }
                             }
                         }
-                        else if (Utils.isClassCollection(field.getType()))
+                        else if (Utils.IsClassCollection(field.getType()))
                         {
                             Class collectionType = field.getType().getComponentType();
                             
@@ -227,86 +227,21 @@ public class MySQLLoader
     {
         return null;
     }
-    
-    public Boolean Save(EntityObject entityObject) 
+           
+    public Boolean Save(EntityObject entityObject, TransactionParameters transactionParameters) 
     {
         Boolean isSuccessful = false;
         
         Connection connection = this.repository.GetConnection();
                         
-        Transaction transaction = new Transaction(connection);
+        Transaction transaction = new Transaction(connection, transactionParameters);
         transaction.Prepare();
         transaction.Save(entityObject);
         
-        transaction.Commit();
-                
-                        
-//        StringBuilder commandBuilder = new StringBuilder();
-//        
-//        if (!useUpdate) {                        
-//            commandBuilder.append(String.format("INSERT INTO %s (", tableName));
-//            StringBuilder valuesBuilder = new StringBuilder();            
-//            
-//            for (Field field : entityClass.getFields()){                
-//                if (!isClassCollection(field.getType())) {
-//                    commandBuilder.append(String.format("%s, ", field.getName()));                        
-//                    valuesBuilder.append(String.format("%s, ", Utils.GetValue(entityObject, field)));
-//                }
-//            }
-//            
-//            commandBuilder.deleteCharAt(commandBuilder.length() - 2);
-//            valuesBuilder.deleteCharAt(valuesBuilder.length() - 2);
-//            
-//            commandBuilder.append(String.format(") VALUES (%s)", valuesBuilder.toString()));
-//        }
-//        else {
-//            commandBuilder.append(String.format("UPDATE %s SET ", tableName));
-//                        
-//            for (Field field : entityClass.getFields())
-//            {
-//                if (Utils.IsEligable(field))
-//                {
-//                    if (!isClassCollection(field.getType())) 
-//                    {
-//                        commandBuilder.append(String.format("%s=%s, ",field.getName(), Utils.GetValue(entityObject, field)));
-//                    }
-//                    else
-//                    {
-//                        
-//                    }
-//                }
-//            }
-//            
-//            commandBuilder.deleteCharAt(commandBuilder.length() - 2);
-//            
-//            commandBuilder.append(String.format(" WHERE Reference='%s'", entityObject.Reference));
-//        }
-//        
-//        String command = commandBuilder.toString();
-//        
-//        if (!command.isEmpty()) {
-//            try
-//            {
-//                Statement statement = connection.createStatement();
-//
-//                Boolean isResultSet = statement.execute(command);
-//
-//                if (isResultSet) 
-//                {
-//                    ResultSet resultSet = statement.getResultSet();
-//                }
-//                else 
-//                {
-//
-//                }
-//                
-//                isSuccessful = true;
-//            }
-//            catch (SQLException exception)
-//            {    
-//                System.out.println(exception);
-//            }
-//        }
+        if (transaction.Commit())
+        {
+            isSuccessful = true;
+        }
         
         return isSuccessful;
     }

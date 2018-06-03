@@ -94,7 +94,7 @@ public class Utils {
         
         for (Field field : baseClass.getFields()){
             if (!tableFields.contains(field.getName())) {
-                if (isClassCollection(field.getType())) {
+                if (IsClassCollection(field.getType())) {
                     System.out.println(String.format("Unsupported Field type: %s", field.getType().getName()));
                 } else {
                     alterTable = true;
@@ -122,7 +122,9 @@ public class Utils {
     
     public static Boolean IsEligable(String fieldName)
     {
-        return (!"ID".equals(fieldName)) && (!"Reference".equals(fieldName));   
+        return ((!"ID".equals(fieldName)) 
+                && (!"Reference".equals(fieldName)) 
+                && (!"ModifiedOn".equals(fieldName)));   
     }
     
     public static Boolean IsEligable(Field field)
@@ -149,7 +151,7 @@ public class Utils {
     
     public static void AddProperty(StringBuilder commandBuilder, Field field)
     {
-        if (isClassCollection(field.getType())) {
+        if (IsClassCollection(field.getType())) {
             System.out.println(String.format("Unsupported Field type: %s", field.getType().getName()));
         } else {
             Parking.Base.Utils.AppendLine(commandBuilder, String.format(", %s %s", field.getName(), GetPropertyType(field)));
@@ -184,8 +186,13 @@ public class Utils {
         return propertyType;
     }
     
-    public static boolean isClassCollection(Class c) {
+    public static boolean IsClassCollection(Class c) 
+    {
         return Collection.class.isAssignableFrom(c) || Map.class.isAssignableFrom(c);
+    }
+    
+    public static boolean IsReferencedObject(Class c) {
+        return EntityObject.class.isAssignableFrom(c);
     }
     
     public static String GetTableName(Class type)
@@ -232,7 +239,7 @@ public class Utils {
                 // skip this...
             }
             else if (java.util.Date.class.isAssignableFrom(fieldValueClass))
-            {
+            {                
                 java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 
                 value = sdf.format(value);
@@ -271,20 +278,29 @@ public class Utils {
         List<FieldValue> fieldValues = new ArrayList<FieldValue>();
         
         for (Field field : entityType.getFields())
-        {
-            if (IsEligable(field))
+        {           
+            try
             {
-                try
+                FieldValue fieldValue = null;
+                
+                Boolean isCollection = IsClassCollection(field.getType());
+                
+                if (!isCollection)
                 {
-                    FieldValue fieldValue = new FieldValue(field.getName(), field.get(entityObject), isClassCollection(entityType));
-                            
-                    fieldValues.add(fieldValue);
-                            
+                    fieldValue = new FieldValue(field.getName(), field.get(entityObject), isCollection, IsReferencedObject(field.getType()));
                 }
-                catch (Exception exception)
+                else
                 {
+                    Object collection = field.get(entityObject);
                     
+                    fieldValue = new FieldValue(field.getName(), collection , isCollection, false);
                 }
+
+                fieldValues.add(fieldValue);
+            }
+            catch (Exception exception)
+            {
+
             }
         }
         

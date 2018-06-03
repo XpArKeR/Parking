@@ -7,14 +7,13 @@ package Parking.Storage.Repository.MySQL;
 
 import Parking.Core.EntityObject;
 import Parking.Storage.StorageRepository;
+import Parking.Storage.TransactionParameters;
 import com.mysql.jdbc.jdbc2.optional.MysqlDataSource;
 import java.sql.Connection;
-import java.sql.DatabaseMetaData;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
-import java.util.List;
 
 /**
  *
@@ -237,21 +236,35 @@ public class MySQLRepository extends StorageRepository
     @Override
     public Boolean Save(EntityObject entityObject) 
     {
-        if (entityObject == null) {
+        return this.Save(entityObject, null);
+    }    
+    
+    @Override
+    public Boolean Save(EntityObject entityObject, TransactionParameters transactionParameters)
+    {
+        if (entityObject == null) 
+        {
             throw new IllegalArgumentException("Argument is null!");
         }
-        else if ((entityObject.Reference != null) && (entityObject.Reference.isEmpty())) {
+        else if ((entityObject.Reference != null) && (entityObject.Reference.isEmpty())) 
+        {
             throw new IllegalArgumentException("Referenc emay not be empty!");
+        }
+        
+        if (transactionParameters == null)
+        {
+            transactionParameters = new TransactionParameters();
         }
         
         Class type = entityObject.getClass();
         
-        if (!this.checkType(type)){
+        if (!this.checkType(type))
+        {
             throw new IllegalArgumentException(String.format("Critical Error. Type %s can't be initialized!", type.getName()));
         }        
         
-        return this.GetLoader().Save(entityObject);
-    }    
+        return this.GetLoader().Save(entityObject, transactionParameters);
+    }
     
     private Boolean checkType(Class type)
     {        
