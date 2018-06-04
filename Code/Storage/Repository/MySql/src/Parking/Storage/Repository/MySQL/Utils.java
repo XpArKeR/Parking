@@ -6,7 +6,7 @@
 package Parking.Storage.Repository.MySQL;
 
 import Parking.Core.EntityObject;
-import Parking.Storage.Repository.MySQL.Transactions.FieldValue;
+import Parking.Storage.Repository.MySQL.FieldValue;
 import java.lang.reflect.Field;
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
@@ -37,6 +37,7 @@ public class Utils {
         
         Parking.Base.Utils.AppendLine(commandBuilder, "(ID varchar(36) NOT NULL PRIMARY KEY");
         Parking.Base.Utils.AppendLine(commandBuilder, ", Reference varchar(255) NOT NULL");
+        Parking.Base.Utils.AppendLine(commandBuilder, ", ModifiedOn DateTime");
         
         List<String> fields = new ArrayList<>();
         
@@ -47,7 +48,7 @@ public class Utils {
                 fields.add(field.getName());
             }
         }
-        
+                
         Parking.Base.Utils.AppendLine(commandBuilder, ");");
         
         Connection connection = repository.GetConnection();

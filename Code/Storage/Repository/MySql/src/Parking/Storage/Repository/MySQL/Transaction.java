@@ -3,9 +3,10 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
-package Parking.Storage.Repository.MySQL.Transactions;
+package Parking.Storage.Repository.MySQL;
 
 import Parking.Core.EntityObject;
+import Parking.Storage.Repository.MySQL.MySQLRepository;
 import Parking.Storage.Repository.MySQL.Utils;
 import Parking.Storage.TransactionParameters;
 import java.sql.*;
@@ -19,13 +20,15 @@ public class Transaction
 {
     private Boolean canCommit = false;
     private Boolean isPrepared = false;
+    private MySQLRepository repository;
+    
     private Connection connection;
     private TransactionParameters transactionParameters;
     private ArrayList<PreparedStatement> statements;
     
-    public Transaction(Connection connection, TransactionParameters transactionParameters)
+    public Transaction(MySQLRepository repository, TransactionParameters transactionParameters)
     {
-        this.connection = connection;
+        this.repository = repository;
         this.statements = new ArrayList<>();
         this.transactionParameters = transactionParameters;
     }
@@ -34,6 +37,11 @@ public class Transaction
     {
         try
         {
+            if (this.connection == null)
+            {
+                this.connection = this.repository.GetConnection();
+            }
+            
             this.connection.setAutoCommit(false);
             this.isPrepared = true;
         }
@@ -191,7 +199,7 @@ public class Transaction
                                     {
                                         if (this.transactionParameters.IsSavingCascade)
                                         {
-                                            this.Save((EntityObject)item);
+                                            this.repository.Save((EntityObject)item);
                                         }
                                     }
                                 }   
@@ -269,6 +277,25 @@ public class Transaction
 
                     counter++;
                 }
+                else
+                {
+                    if (fieldValue.Value != null)
+                    {
+                        if (Collection.class.isAssignableFrom(fieldValue.Value.getClass()))
+                        {
+                            for (Object item : (Collection)fieldValue.Value)
+                            {   
+                                if (EntityObject.class.isAssignableFrom(item.getClass()))
+                                {
+                                    if (this.transactionParameters.IsSavingCascade)
+                                    {
+                                        this.repository.Save((EntityObject)item);
+                                    }
+                                }
+                            }   
+                        }
+                    }
+                }
             }
             
             preparedStatement.executeUpdate();            
@@ -278,7 +305,7 @@ public class Transaction
         }
         catch (SQLException exception)
         {
-            System.out.println("Parking.Storage.Repository.MySQL.Transactions.Transaction.PrepareInsertStatement()");
+            exception.printStackTrace();
         }
         
         return isSuccessful;

@@ -7,7 +7,7 @@ package Parking.Storage.Repository.MySQL;
 
 import Parking.Core.BaseObject;
 import Parking.Core.EntityObject;
-import Parking.Storage.Repository.MySQL.Transactions.Transaction;
+import Parking.Storage.Repository.MySQL.Transaction;
 import Parking.Storage.TransactionParameters;
 import java.lang.reflect.Field;
 import java.sql.Connection;
@@ -18,10 +18,6 @@ import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.HashMap;
 
-/**
- *
- * @author noldi
- */
 public class MySQLLoader 
 {
     private MySQLRepository repository;
@@ -231,10 +227,8 @@ public class MySQLLoader
     public Boolean Save(EntityObject entityObject, TransactionParameters transactionParameters) 
     {
         Boolean isSuccessful = false;
-        
-        Connection connection = this.repository.GetConnection();
-                        
-        Transaction transaction = new Transaction(connection, transactionParameters);
+                                
+        Transaction transaction = new Transaction(this.repository, transactionParameters);
         transaction.Prepare();
         transaction.Save(entityObject);
         

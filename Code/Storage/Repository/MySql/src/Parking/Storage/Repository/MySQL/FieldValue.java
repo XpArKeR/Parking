@@ -3,14 +3,10 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
-package Parking.Storage.Repository.MySQL.Transactions;
+package Parking.Storage.Repository.MySQL;
 
 import java.util.Collection;
 
-/**
- *
- * @author noldi
- */
 public class FieldValue 
 {    
     public FieldValue(String key, Object value, Boolean isCollection, Boolean isReferencedObject)

@@ -97,7 +97,7 @@ public class MySQLRepository extends StorageRepository
         return success;
     }
 
-    protected Connection GetConnection()
+    Connection GetConnection()
     {
         Connection newConnection = null;
         
