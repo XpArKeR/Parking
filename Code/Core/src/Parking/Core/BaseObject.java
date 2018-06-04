@@ -18,6 +18,7 @@ public class BaseObject extends Object
     public BaseObject()
     {
         this.instanceID = UUID.randomUUID().toString();
+        this.ModifiedOn = new Date();
     }
     
     private String instanceID;
@@ -37,6 +38,11 @@ public class BaseObject extends Object
             case "ID":
             case "Parking.Core.BaseObject.ID":
                 this.ID = (String)value;
+                break;
+                
+            case "ModifiedOn":
+            case "Parking.Core.BaseObject.ModifiedOn":
+                this.ModifiedOn = (Date)value;
         }
     }
 }

@@ -29,8 +29,13 @@ public class Operator extends Parking.Core.Operator
         
         return isSuccessful;
     }
-    
+            
     public Boolean Save(EntityObject entityObject)
+    {
+        return this.Save(entityObject, null);
+    }
+    
+    public Boolean Save(EntityObject entityObject, TransactionParameters transactionParameters)
     {
         if (entityObject.Reference.isEmpty())
         {
@@ -40,11 +45,16 @@ public class Operator extends Parking.Core.Operator
             }            
         }
         
+        if (transactionParameters == null)
+        {
+            transactionParameters = new TransactionParameters();
+        }
+        
         Boolean saveSuccessful = true;
         
         for(StorageRepository repository : Parking.Base.Storage.GetManager().GetRepositories(entityObject.getClass()))
         {
-            if (!repository.Save(entityObject))
+            if (!repository.Save(entityObject, transactionParameters))
             {
                 saveSuccessful = false;
             }
