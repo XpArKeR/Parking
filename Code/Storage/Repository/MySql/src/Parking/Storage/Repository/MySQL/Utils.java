@@ -5,8 +5,8 @@
  */
 package Parking.Storage.Repository.MySQL;
 
+import Parking.Core.BaseObject;
 import Parking.Core.EntityObject;
-import Parking.Storage.Repository.MySQL.FieldValue;
 import java.lang.reflect.Field;
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
@@ -205,9 +205,12 @@ public class Utils {
             tableType = tableType.getSuperclass();
         }
         
-        String tableName = tableType.getName().replace(".", "_");
-        
-        return tableName;
+        return tableType.getName().replace(".", "_");
+    }
+    
+    public static String GetTableName(BaseObject baseObject, Field field)
+    {
+        return String.format("%s_%s", baseObject.getClass().getName().replace(".", "_"), field.getName());
     }
     
     public static Object GetValue(EntityObject entityObject, Field field)

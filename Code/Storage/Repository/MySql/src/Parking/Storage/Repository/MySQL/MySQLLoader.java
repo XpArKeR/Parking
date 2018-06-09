@@ -7,12 +7,12 @@ package Parking.Storage.Repository.MySQL;
 
 import Parking.Core.BaseObject;
 import Parking.Core.EntityObject;
-import Parking.Storage.Repository.MySQL.Transaction;
+import Parking.Storage.QueryParameters;
 import Parking.Storage.TransactionParameters;
 import java.lang.reflect.Field;
+import java.lang.reflect.ParameterizedType;
 import java.sql.Connection;
 import java.sql.ResultSet;
-import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
@@ -21,10 +21,12 @@ import java.util.HashMap;
 public class MySQLLoader 
 {
     private MySQLRepository repository;
+    private HashMap<String, BaseObject> loadedObjects;
  
     public MySQLLoader(MySQLRepository repository)
     {
         this.repository = repository;
+        this.loadedObjects = new HashMap<>();
     }
     
     public <T extends BaseObject> T Get(String reference, Class type)
@@ -35,6 +37,11 @@ public class MySQLLoader
         {
             throw new IllegalArgumentException("A Class must be provided!");
         }
+        
+        if (!this.repository.CheckType(type))
+        {
+            throw new IllegalArgumentException(String.format("Critical Error. Type %s can't be initialized!", type.getName()));
+        }  
         
         if ((reference == null) ||(reference.isEmpty()))
         {
@@ -66,7 +73,7 @@ public class MySQLLoader
                 
                 if (returnValue != null)
                 {
-                    this.Populate(returnValue, type, resultSet);
+                    this.Populate(returnValue, type, resultSet, connection);
                 }
             }
             else
@@ -91,75 +98,94 @@ public class MySQLLoader
             throw new IllegalArgumentException("A Class must be provided!");
         }
         
+        if (!this.repository.CheckType(type))
+        {
+            throw new IllegalArgumentException(String.format("Critical Error. Type %s can't be initialized!", type.getName()));
+        }
+        
         if (id.isEmpty())
         {
             return returnValue;
         }
         
-        String tableName = Utils.GetTableName(type);
-        
-        Connection connection = this.repository.GetConnection();
-        
-        try
+        if (!this.loadedObjects.containsKey(id))
         {
-            Statement statement = connection.createStatement();
-            
-            String query = String.format("SELECT * FROM %s WHERE ID='%s'", tableName, id);
-            
-            ResultSet resultSet = statement.executeQuery(query);
-            
-            if (resultSet.first())
+            String tableName = Utils.GetTableName(type);
+
+            Connection connection = this.repository.GetConnection();
+
+            try
             {
-                try
+                Statement statement = connection.createStatement();
+
+                String query = String.format("SELECT * FROM %s WHERE ID='%s' LIMIT 1", tableName, id);
+
+                ResultSet resultSet = statement.executeQuery(query);
+
+                if (resultSet.first())
                 {
-                    returnValue = (T)type.newInstance();                    
+                    try
+                    {
+                        returnValue = (T)type.newInstance();                    
+                    }
+                    catch (Exception exception)
+                    {
+                        System.out.println(String.format("Exception whilst creating instance of type %s.", type.getName()));
+                    }                                
+
+                    if (returnValue != null)
+                    {
+                        this.Populate(returnValue, type, resultSet, connection);
+                    }
                 }
-                catch (Exception exception)
+                else
                 {
-                    System.out.println(String.format("Exception whilst creating instance of type %s.", type.getName()));
-                }                                
-                
-                if (returnValue != null)
-                {
-                    this.Populate(returnValue, type, resultSet);
+                    System.out.println(String.format("Referenced Object not found: %s (%s).", id, type.getName()));
                 }
             }
-            else
-            {
-                System.out.println(String.format("Referenced Object not found: %s (%s).", id, type.getName()));
+            catch (SQLException exception)
+            {            
+                System.out.println(exception);
             }
         }
-        catch (SQLException exception)
-        {            
-            System.out.println(exception);
+        else
+        {
+            returnValue = (T)this.loadedObjects.get(id);
         }
         
         return returnValue;
     }
     
-    protected void Populate(BaseObject baseObject,Class type, ResultSet resultSet)
+    protected void Populate(BaseObject baseObject,Class type, ResultSet resultSet, Connection connection)
     {
         if (baseObject != null)
         {
             try
             {
-                HashMap<String, BaseObject> loadedObjects = new HashMap<String, BaseObject>();
-
-                ResultSetMetaData resultSetMetaData = resultSet.getMetaData();
-
-                for (int counter = 1; counter < resultSetMetaData.getColumnCount(); counter++)
+                baseObject.ID = resultSet.getString("ID");
+                
+                if (!loadedObjects.containsKey(baseObject.ID))
                 {
-                    String columnName = resultSetMetaData.getColumnName(counter);
-
-                    Field field = null;
-
-                    try
+                    loadedObjects.put(baseObject.ID, baseObject);
+                }
+                               
+                for (Field field : type.getFields())
+                {
+                    if (!"ID".equals(field.getName()))
                     {
-                        field = type.getField(columnName);                                              
-
-                        if (EntityObject.class.isAssignableFrom(field.getType()))
+                        if (Utils.IsClassCollection(field.getType()))
                         {
-                            String referencedObjectID = resultSet.getString(counter);
+                            ParameterizedType fieldType = (ParameterizedType) field.getGenericType();
+                            Class<?> listGenericType = (Class<?>) fieldType.getActualTypeArguments()[0];
+
+                            if (EntityObject.class.isAssignableFrom(listGenericType))
+                            {
+                                this.LoadListField(baseObject, field, listGenericType, connection);
+                            }                            
+                        }
+                        else if (EntityObject.class.isAssignableFrom(field.getType()))
+                        {
+                            String referencedObjectID = resultSet.getString(field.getName());
 
                             if (!referencedObjectID.isEmpty())
                             {
@@ -172,7 +198,7 @@ public class MySQLLoader
                                 else
                                 {
                                     referencedObject = this.GetByID(referencedObjectID, field.getType());
-                                    
+
                                     if (referencedObject != null)
                                     {
                                         loadedObjects.put(referencedObjectID, referencedObject);
@@ -181,34 +207,30 @@ public class MySQLLoader
 
                                 if (referencedObject != null)
                                 {
-                                    field.set(baseObject, referencedObject);                                
+                                    try
+                                    {
+                                        field.set(baseObject, referencedObject);                                
+                                    }
+                                    catch (IllegalAccessException exception)
+                                    {
+
+                                    }
                                 }
                             }
-                        }
-                        else if (Utils.IsClassCollection(field.getType()))
-                        {
-                            Class collectionType = field.getType().getComponentType();
-                            
-                            
                         }
                         else
                         {
-                            Object value = resultSet.getObject(counter);
+                            Object value = resultSet.getObject(field.getName());
 
-                            if ("ID".equals(columnName))
+                            try
                             {
-                                if (!loadedObjects.containsKey((String)value))
-                                {
-                                    loadedObjects.put((String)value, baseObject);
-                                }
+                                field.set(baseObject, value);
                             }
+                            catch (IllegalAccessException exception)
+                            {
 
-                            field.set(baseObject, value);
+                            }
                         }
-                    }
-                    catch (Exception exception)
-                    {
-                        System.out.println("Exception when converting Data from database...");
                     }
                 }
             }
@@ -219,15 +241,37 @@ public class MySQLLoader
         }   
     }
     
-    public <T extends BaseObject> ArrayList<T> Search(Class type) 
+    private void LoadListField(BaseObject baseObject, Field field, Class entityType, Connection connection)
+    {        
+        if (!this.repository.CheckType(baseObject, field))
+        {
+            throw new IllegalArgumentException(String.format("Critical Error. Type %s-%s can't be initialized!", baseObject.getClass().getName(), field.getName()));
+        }
+        
+        
+    }
+        
+    public <T extends BaseObject> ArrayList<T> Search(Class type, QueryParameters queryParameters) 
     {
+        if (!this.repository.CheckType(type))
+        {
+            throw new IllegalArgumentException(String.format("Critical Error. Type %s can't be initialized!", type.getName()));
+        }
+                        
         return null;
     }
-           
+               
     public Boolean Save(EntityObject entityObject, TransactionParameters transactionParameters) 
-    {
+    {        
         Boolean isSuccessful = false;
-                                
+     
+        Class type = entityObject.getClass();
+        
+        if (!this.repository.CheckType(type))
+        {
+            throw new IllegalArgumentException(String.format("Critical Error. Type %s can't be initialized!", type.getName()));
+        }
+        
         Transaction transaction = new Transaction(this.repository, transactionParameters);
         transaction.Prepare();
         transaction.Save(entityObject);

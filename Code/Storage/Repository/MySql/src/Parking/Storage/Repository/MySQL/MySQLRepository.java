@@ -5,10 +5,13 @@
  */
 package Parking.Storage.Repository.MySQL;
 
+import Parking.Core.BaseObject;
 import Parking.Core.EntityObject;
+import Parking.Storage.QueryParameters;
 import Parking.Storage.StorageRepository;
 import Parking.Storage.TransactionParameters;
 import com.mysql.jdbc.jdbc2.optional.MysqlDataSource;
+import java.lang.reflect.Field;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -120,6 +123,125 @@ public class MySQLRepository extends StorageRepository
         return newConnection;
     }
     
+    @Override
+    public Boolean Open()
+    {
+        Boolean isSuccessful = false;
+        
+        if ((this.LoadClass()) && (this.TestConnection())){            
+            isSuccessful = true;
+        }
+        
+        return isSuccessful;
+    }
+    
+    @Override
+    public Boolean Close()
+    {        
+        return true;
+    }
+
+    @Override
+    public <T extends EntityObject> T Get(String reference, Class type) 
+    {             
+        if ((reference == null) || (reference.trim().isEmpty()) || type == null) {
+            throw new IllegalArgumentException("Argument is null!");
+        }
+                
+        return this.GetLoader().Get(reference, type);
+    }
+    
+    @Override
+    public <T extends EntityObject> T GetByID(String id, Class type) 
+    {
+        if ((id == null) || (id.trim().isEmpty()) || type == null) {
+            throw new IllegalArgumentException("Argument is null!");
+        }
+        
+        return this.GetLoader().GetByID(id, type);
+    }
+
+    @Override
+    public <T extends EntityObject> ArrayList<T> Search(Class type) 
+    {
+        return this.Search(type, null);
+    }
+    
+    @Override
+    public <T extends EntityObject> ArrayList<T> Search(Class type, QueryParameters queryParameters)
+    {
+        if (type == null) {
+            throw new IllegalArgumentException("Argument is null!");
+        }
+        
+        if (queryParameters == null)
+        {
+            queryParameters = new QueryParameters();
+        }
+        
+        return GetLoader().Search(type, queryParameters);
+    }
+
+    @Override
+    public Boolean Save(EntityObject entityObject) 
+    {
+        return this.Save(entityObject, null);
+    }    
+    
+    @Override
+    public Boolean Save(EntityObject entityObject, TransactionParameters transactionParameters)
+    {
+        if (entityObject == null) 
+        {
+            throw new IllegalArgumentException("Argument is null!");
+        }
+        else if ((entityObject.Reference != null) && (entityObject.Reference.isEmpty())) 
+        {
+            throw new IllegalArgumentException("Referenc emay not be empty!");
+        }
+        
+        if (transactionParameters == null)
+        {
+            transactionParameters = new TransactionParameters();
+        }
+
+        return this.GetLoader().Save(entityObject, transactionParameters);
+    }
+    
+    Boolean CheckType(Class type)
+    {        
+        Boolean isSuccessful = false;
+        
+        if (!this.initializedTypes.contains(type.getName())) 
+        {
+            if (this.initializeType(type)) 
+            {
+                this.initializedTypes.add(type.getName());                
+                isSuccessful = true;
+            }            
+        }
+        
+        return isSuccessful;
+    }
+    
+    Boolean CheckType(BaseObject baseObject, Field field)
+    {
+        Boolean isSuccessful = true;
+        
+        String fieldKey = String.format("%s_%s", Utils.GetTableName(baseObject.getClass()), field.getName());
+        
+        if (!this.initializedTypes.contains(fieldKey)) 
+        {
+            if (this.initializeType(baseObject, field)) 
+            {
+                this.initializedTypes.add(fieldKey);                
+                isSuccessful = true;
+            }            
+        }
+        
+        return isSuccessful;
+    }
+    
     private Boolean initializeType(Class type)
     {   
         Boolean isSuccessful = false;
@@ -145,18 +267,46 @@ public class MySQLRepository extends StorageRepository
         
         return isSuccessful;
     }
+    
+    private Boolean initializeType(BaseObject baseObject, Field field)
+    {   
+        Boolean isSuccessful = false;
+        
+        String tableName = Utils.GetTableName(baseObject, field);
+        
+//        if (!this.CheckTableExists(tableName)) 
+//        {
+//            isSuccessful = Utils.CreateTable(this, baseObject.class, baseClass);
+//        } 
+//        else if (!Utils.UpdateTable(this, baseClass))
+//        {
+//            isSuccessful = false;
+//        } 
+//        else 
+//        {
+//            isSuccessful = true;
+//        }
+        
+        return isSuccessful;
+    }
             
     private Boolean CheckTableExists(Class type)     
     {
-        Boolean tableExists = false;
-        
         String tableName = Utils.GetTableName(type);
+        
+        return this.CheckTableExists(tableName);
+    }
+    
+    private Boolean CheckTableExists(String tableName)     
+    {
+        Boolean tableExists = false;
         
         String command = String.format("SELECT * FROM information_schema.tables WHERE table_schema = '%s' AND table_name = '%s' LIMIT 1;", this.database, tableName);
         
         Connection connection = this.GetConnection();
         
-        try{
+        try
+        {
             Statement statement = connection.createStatement();
             // Result set get the result of the SQL query
             ResultSet resultSet = statement.executeQuery(command);
@@ -171,113 +321,5 @@ public class MySQLRepository extends StorageRepository
         }
                                
         return tableExists;
-    }
-                            
-    @Override
-    public Boolean Open()
-    {
-        Boolean isSuccessful = false;
-        
-        if ((this.LoadClass()) && (this.TestConnection())){            
-            isSuccessful = true;
-        }
-        
-        return isSuccessful;
-    }
-    
-    @Override
-    public Boolean Close()
-    {        
-        return true;
-    }
-
-    @Override
-    public <T extends EntityObject> T Get(String reference, Class type) 
-    {             
-        if ((reference == null) || (reference.trim().isEmpty()) || type == null) {
-            throw new IllegalArgumentException("Argument is null!");
-        }
-        
-        if (!this.checkType(type)){
-            throw new IllegalArgumentException(String.format("Critical Error. Type %s can't be initialized!", type.getName()));
-        }  
-        
-        return this.GetLoader().Get(reference, type);
-    }
-    
-    @Override
-    public <T extends EntityObject> T GetByID(String id, Class type) 
-    {
-        if ((id == null) || (id.trim().isEmpty()) || type == null) {
-            throw new IllegalArgumentException("Argument is null!");
-        }
-        
-        if (!this.checkType(type)){
-            throw new IllegalArgumentException(String.format("Critical Error. Type %s can't be initialized!", type.getName()));
-        }  
-        
-        return this.GetLoader().GetByID(id, type);
-    }
-
-    @Override
-    public <T extends EntityObject> ArrayList<T> Search(Class type) 
-    {
-        if (type == null) {
-            throw new IllegalArgumentException("Argument is null!");
-        }
-        
-        if (!this.checkType(type)){
-            throw new IllegalArgumentException(String.format("Critical Error. Type %s can't be initialized!", type.getName()));
-        }  
-        
-        return this.GetLoader().Search(type);
-    }
-
-    @Override
-    public Boolean Save(EntityObject entityObject) 
-    {
-        return this.Save(entityObject, null);
-    }    
-    
-    @Override
-    public Boolean Save(EntityObject entityObject, TransactionParameters transactionParameters)
-    {
-        if (entityObject == null) 
-        {
-            throw new IllegalArgumentException("Argument is null!");
-        }
-        else if ((entityObject.Reference != null) && (entityObject.Reference.isEmpty())) 
-        {
-            throw new IllegalArgumentException("Referenc emay not be empty!");
-        }
-        
-        if (transactionParameters == null)
-        {
-            transactionParameters = new TransactionParameters();
-        }
-        
-        Class type = entityObject.getClass();
-        
-        if (!this.checkType(type))
-        {
-            throw new IllegalArgumentException(String.format("Critical Error. Type %s can't be initialized!", type.getName()));
-        }        
-        
-        return this.GetLoader().Save(entityObject, transactionParameters);
-    }
-    
-    private Boolean checkType(Class type)
-    {        
-        Boolean isSuccessful = true;
-        
-        if (!this.initializedTypes.contains(type.getName())) {
-            if (this.initializeType(type)) {
-                this.initializedTypes.add(type.getName());                
-            } else {
-                isSuccessful = false;
-            }            
-        }
-        
-        return isSuccessful;
     }
 }
