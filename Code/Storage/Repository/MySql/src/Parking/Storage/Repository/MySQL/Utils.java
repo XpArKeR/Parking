@@ -30,6 +30,7 @@ public class Utils {
     private static HashMap<Integer, java.sql.Types> sqlTypesCache = new HashMap<Integer, java.sql.Types>();
 
     public static Boolean CreateTable(MySQLRepository repository, Class type, Class baseType) {
+        Parking.Base.Debugger.Log("Creating Table for type '%s', base type '%s'", type.getName(), baseType.getName());
         String tableName = GetTableName(baseType);
 
         List<String> fields = new ArrayList<>();
@@ -99,6 +100,8 @@ public class Utils {
         Connection connection = repository.GetConnection();
 
         try {
+            Parking.Base.Debugger.Log("Creating Table with query '%s'", commandBuilder.toString());
+            
             PreparedStatement statement = connection.prepareStatement(commandBuilder.toString());
             // Result set get the result of the SQL query
             statement.executeUpdate();
