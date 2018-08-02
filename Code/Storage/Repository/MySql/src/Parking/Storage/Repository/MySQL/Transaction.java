@@ -5,13 +5,10 @@
  */
 package Parking.Storage.Repository.MySQL;
 
+import Parking.Base.Debugger;
 import Parking.Core.EntityObject;
-import Parking.Storage.Repository.MySQL.MySQLRepository;
-import Parking.Storage.Repository.MySQL.Utils;
 import Parking.Storage.TransactionParameters;
 import java.sql.*;
-import java.text.DateFormat;
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -41,7 +38,7 @@ public class Transaction {
             this.connection.setAutoCommit(false);
             this.isPrepared = true;
         } catch (SQLException sqlException) {
-
+            Debugger.Log("Exception in Transaction.Prepare(): %s", sqlException.getMessage());
         }
     }
 
@@ -79,7 +76,7 @@ public class Transaction {
                 System.err.println("Failed to Update Object.");
             }
         } else {
-            if (this.PrepareInsertStatement(entityObject, tableName, fieldValues)) {
+            if (this.PrepareInsertStatement(tableName, fieldValues)) {
                 this.canCommit = true;
             } else {
                 System.err.println("Failed to save Object.");
@@ -175,7 +172,7 @@ public class Transaction {
         return isSuccessful;
     }
 
-    private Boolean PrepareInsertStatement(EntityObject entityObject, String tableName, List<FieldValue> fieldValues) {
+    private Boolean PrepareInsertStatement(String tableName, List<FieldValue> fieldValues) {
         Boolean isSuccessful = false;
 
         StringBuilder commandBuilder = new StringBuilder();

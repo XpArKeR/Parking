@@ -5,6 +5,7 @@
  */
 package Parking.Storage.Repository.MySQL;
 
+import Parking.Base.Debugger;
 import Parking.Core.BaseObject;
 import Parking.Core.EntityObject;
 import Parking.Storage.QueryParameters;
@@ -142,7 +143,10 @@ public class MySQLLoader {
                                 this.LoadListField(baseObject, field, listGenericType, connection);
                             }
                         } else if (EntityObject.class.isAssignableFrom(field.getType())) {
-                            String referencedObjectID = resultSet.getString(field.getName());
+                            
+                            String columnName = String.format("%sID", field.getName());
+                            
+                            String referencedObjectID = resultSet.getString(columnName);
 
                             if (!referencedObjectID.isEmpty()) {
                                 EntityObject referencedObject = null;
@@ -161,7 +165,7 @@ public class MySQLLoader {
                                     try {
                                         field.set(baseObject, referencedObject);
                                     } catch (IllegalAccessException exception) {
-
+                                        Debugger.Log(exception.getMessage());
                                     }
                                 }
                             }
@@ -171,7 +175,7 @@ public class MySQLLoader {
                             try {
                                 field.set(baseObject, value);
                             } catch (IllegalAccessException exception) {
-
+                                Debugger.Log(exception.getMessage());
                             }
                         }
                     }

@@ -9,6 +9,7 @@ import Parking.Ontology.Categories.Category;
 import Parking.Ontology.Optics.Barcode;
 import Parking.Core.EntityObject;
 import java.util.List;
+import java.util.UUID;
 
 /**
  *
@@ -21,6 +22,14 @@ public class Product extends EntityObject {
     public List<ProductLine> Lines;
     public List<Barcode> Codes;
     public int Amount;
+    
+    @Override
+    public Boolean GenerateReference()
+    {
+        this.Reference = UUID.randomUUID().toString();
+        
+        return true;
+    }
     
     @Override
     public void SetProperty(String propertyName, Object value)

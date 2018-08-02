@@ -5,6 +5,7 @@
  */
 package Parking.Storage.Repository.MySQL;
 
+import Parking.Base.Debugger;
 import Parking.Core.BaseObject;
 import Parking.Core.EntityObject;
 import java.lang.reflect.Field;
@@ -215,9 +216,15 @@ public class Utils {
         StringBuilder alterCommands = new StringBuilder();
         alterCommands.append(String.format("ALTER TABLE %s ", tableName));
 
+        Debugger.Log("Checking table '%s' ", tableName);
+        
         String prefix = "";
         for (FieldInformation fieldInformation : fieldInformations) {
-            if (!tableFields.contains(fieldInformation.getName())) {
+            
+            Boolean columnFound = tableFields.contains(fieldInformation.getName());
+            Debugger.Log("Checking field '%s', found: %s", fieldInformation.getName(), columnFound);
+            
+            if (!columnFound) {
                 alterTable = true;
 
                 Parking.Base.Utils.AppendLine(alterCommands, String.format("%sADD COLUMN %s", prefix, GetFieldDefinition(fieldInformation)));
@@ -383,7 +390,7 @@ public class Utils {
 
                 fieldValues.add(fieldValue);
             } catch (Exception exception) {
-
+                Debugger.Log(exception.getMessage());
             }
         }
 

@@ -16,7 +16,11 @@ public class Debugger {
     {
         if (IsEnabled)
         {
-            System.out.println(String.format(message, arguments));
+            if (arguments!= null && arguments.length > 0) {
+                System.out.println(String.format(message, arguments));
+            } else {
+                System.out.println(message);
+            }
         }
     }
 }

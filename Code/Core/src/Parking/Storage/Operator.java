@@ -1,5 +1,6 @@
 package Parking.Storage;
 
+import Parking.Base.Debugger;
 import Parking.Core.EntityObject;
 import java.util.ArrayList;
 
@@ -37,7 +38,9 @@ public class Operator extends Parking.Core.Operator
     
     public Boolean Save(EntityObject entityObject, TransactionParameters transactionParameters)
     {
-        if (entityObject.Reference.isEmpty())
+        Debugger.Log("Saving entityObject '%s'", entityObject.toString());
+        
+        if ((entityObject.Reference == null) || (entityObject.Reference.isEmpty()))
         {
             if (!entityObject.GenerateReference())
             {
